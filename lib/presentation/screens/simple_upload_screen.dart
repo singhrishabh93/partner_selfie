@@ -33,44 +33,6 @@ class SimpleUploadScreen extends StatelessWidget {
               child: Column(
                 children: [
                   const SizedBox(height: 40),
-                  // Logo/Icon
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFfe002a), Color(0xFFcc0022)],
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Icon(
-                      Icons.flash_on,
-                      color: Colors.white,
-                      size: 40,
-                    ),
-                  ),
-                  const SizedBox(height: 30),
-
-                  // Title
-                  const Text(
-                    'Transform Your Photos',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'Upload a selfie and let AI create a professional portrait',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white70,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 40),
 
                   // Upload Button
                   if (state.selectedImage == null)
@@ -96,7 +58,9 @@ class SimpleUploadScreen extends StatelessWidget {
                     ),
 
                   // Selected Image Preview
-                  if (state.selectedImage != null && !state.isProcessing)
+                  if (state.selectedImage != null &&
+                      !state.isProcessing &&
+                      state.processedImageUrl == null)
                     Column(
                       children: [
                         Container(
