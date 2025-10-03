@@ -1,7 +1,4 @@
-import 'dart:convert';
-import 'dart:typed_data';
 import 'dart:io';
-import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 
 class SurePassESignService {
@@ -41,7 +38,7 @@ class SurePassESignService {
     }
   }
 
-  /// Initialize eSign process with PDF upload
+  /// Initialize eSign process with PDF URL
   Future<Map<String, dynamic>> initiateESign({
     required String fullName,
     required String userEmail,
@@ -50,15 +47,12 @@ class SurePassESignService {
     try {
       print('Initiating SurePass eSign for: $fullName');
 
-      // Step 1: Upload PDF and get upload link
-      final uploadLink = await _getUploadLink();
-      print('Got upload link: $uploadLink');
+      // Use pre-uploaded PDF URL
+      final pdfUrl =
+          'https://raw.githubusercontent.com/singhrishabh93/partner_selfie/main/assets/dummy-pdf_2.pdf';
+      print('Using PDF URL: $pdfUrl');
 
-      // Step 2: Upload PDF file
-      final pdfUrl = await _uploadPDF(uploadLink);
-      print('PDF uploaded to: $pdfUrl');
-
-      // Step 3: Initialize eSign with uploaded PDF
+      // Initialize eSign with PDF URL
       final esignUrl = await _initializeESign(
         fullName: fullName,
         userEmail: userEmail,
@@ -78,88 +72,6 @@ class SurePassESignService {
     } catch (e) {
       print('SurePass eSign initiation error: $e');
       throw Exception('SurePass eSign initiation error: $e');
-    }
-  }
-
-  /// Get upload link for PDF
-  Future<String> _getUploadLink() async {
-    try {
-      print('Getting SurePass upload link...');
-
-      final response = await _dio.post(
-        '$_baseUrl/api/v1/esign/get-upload-link',
-        options: Options(
-          headers: {
-            'Authorization': 'Bearer $_apiKey',
-            'Content-Type': 'application/json',
-          },
-        ),
-      );
-
-      print('Upload link response: ${response.statusCode}');
-      print('Upload link data: ${response.data}');
-
-      if (response.statusCode == 200) {
-        final uploadUrl = response.data['upload_url'] ?? response.data['url'];
-        if (uploadUrl != null) {
-          print('Upload link received: $uploadUrl');
-          return uploadUrl;
-        } else {
-          throw Exception('No upload URL in response');
-        }
-      } else {
-        throw Exception('Failed to get upload link: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Get upload link error: $e');
-      throw Exception('Get upload link error: $e');
-    }
-  }
-
-  /// Upload PDF file
-  Future<String> _uploadPDF(String uploadUrl) async {
-    try {
-      print('Uploading PDF to SurePass...');
-
-      // Load the dummy PDF file from assets
-      final pdfBytes = await rootBundle.load('assets/dummy-pdf_2.pdf');
-      final pdfData = pdfBytes.buffer.asUint8List();
-      print('Loaded PDF file, size: ${pdfData.length} bytes');
-
-      // Upload PDF to SurePass
-      final response = await _dio.post(
-        uploadUrl,
-        data: FormData.fromMap({
-          'file': MultipartFile.fromBytes(
-            pdfData,
-            filename: 'dummy-pdf_2.pdf',
-            contentType: DioMediaType('application', 'pdf'),
-          ),
-        }),
-        options: Options(
-          headers: {
-            'Authorization': 'Bearer $_apiKey',
-          },
-        ),
-      );
-
-      print('PDF upload response: ${response.statusCode}');
-      print('PDF upload data: ${response.data}');
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final pdfUrl = response.data['url'] ?? response.data['file_url'];
-        if (pdfUrl != null) {
-          print('PDF uploaded successfully: $pdfUrl');
-          return pdfUrl;
-        } else {
-          throw Exception('No PDF URL in upload response');
-        }
-      } else {
-        throw Exception('Failed to upload PDF: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('PDF upload error: $e');
-      throw Exception('PDF upload error: $e');
     }
   }
 

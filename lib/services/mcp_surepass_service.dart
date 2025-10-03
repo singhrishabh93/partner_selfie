@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import '../config/surepass_config.dart';
 
@@ -39,16 +38,11 @@ class MCPSurePassService {
     try {
       print('Initiating SurePass eSign for: $fullName');
 
-      // Step 1: Upload PDF to SurePass
-      final pdfUrl = await _uploadPDFToSurePass();
-      print('PDF uploaded to SurePass: $pdfUrl');
-
-      // Step 2: Initialize eSign with SurePass
+      // Initialize eSign with PDF URL
       final esignResult = await _initializeESignWithSurePass(
         fullName: fullName,
         userEmail: userEmail,
         mobileNumber: mobileNumber,
-        pdfUrl: pdfUrl,
       );
 
       return {
@@ -67,35 +61,11 @@ class MCPSurePassService {
     }
   }
 
-  /// Upload PDF to SurePass using real API
-  Future<String> _uploadPDFToSurePass() async {
-    try {
-      print('Uploading PDF to SurePass...');
-
-      // Load the dummy PDF file from assets
-      final pdfBytes = await rootBundle.load('assets/dummy-pdf_2.pdf');
-      final pdfData = pdfBytes.buffer.asUint8List();
-      print('Loaded PDF file, size: ${pdfData.length} bytes');
-
-      // For demo purposes, we'll use a publicly accessible PDF URL
-      // In production, you would upload the PDF to your server first
-      final pdfUrl =
-          'https://www.aeee.in/wp-content/uploads/2020/08/Sample-pdf.pdf';
-
-      print('Using PDF URL: $pdfUrl');
-      return pdfUrl;
-    } catch (e) {
-      print('PDF upload error: $e');
-      throw Exception('PDF upload error: $e');
-    }
-  }
-
   /// Initialize eSign with real SurePass API
   Future<Map<String, dynamic>> _initializeESignWithSurePass({
     required String fullName,
     required String userEmail,
     required String mobileNumber,
-    required String pdfUrl,
   }) async {
     try {
       print('Initializing SurePass eSign...');
@@ -103,6 +73,8 @@ class MCPSurePassService {
       // Prepare request data for SurePass API
       final requestData = {
         'pdf_pre_uploaded': true,
+        'pdf_url':
+            'https://raw.githubusercontent.com/singhrishabh93/partner_selfie/main/assets/dummy-pdf_2.pdf',
         'sign_type': 'hsm',
         'config': {
           'auth_mode': '1', // Aadhaar OTP
