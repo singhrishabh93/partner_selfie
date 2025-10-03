@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Signature Demo - SurePass</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            margin: 0 auto 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            color: white;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        
+        .document-info {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .info-label {
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .info-value {
+            color: #333;
+        }
+        
+        .signature-section {
+            margin-bottom: 30px;
+        }
+        
+        .signature-canvas {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            width: 100%;
+            height: 150px;
+            margin: 20px 0;
+            cursor: crosshair;
+            background: #fafafa;
+        }
+        
+        .signature-canvas.drawing {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+            min-width: 120px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .progress {
+            width: 100%;
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-weight: 600;
+        }
+        
+        .status.loading {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .signature-preview {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            max-width: 300px;
+            margin: 10px auto;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+            
+            .btn {
+                padding: 12px 20px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">📝</div>
+        <h1>E-Signature Demo</h1>
+        <p class="subtitle">Sign your document digitally</p>
+        
+        <div class="document-info">
+            <div class="info-row">
+                <span class="info-label">Document:</span>
+                <span class="info-value">Non Disclosure Agreement</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Signer:</span>
+                <span class="info-value" id="signerName">Rishabh Singh</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Email:</span>
+                <span class="info-value" id="signerEmail">singhrishabh1672@gmail.com</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Mobile:</span>
+                <span class="info-value" id="signerMobile">7587136215</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Stamp Paper:</span>
+                <span class="info-value">₹100 - Maharashtra</span>
+            </div>
+        </div>
+        
+        <div class="signature-section">
+            <h3>Your Digital Signature</h3>
+            <canvas id="signatureCanvas" class="signature-canvas"></canvas>
+            <div class="signature-preview hidden" id="signaturePreview"></div>
+            <button class="btn btn-secondary" onclick="clearSignature()">Clear Signature</button>
+        </div>
+        
+        <div class="progress">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        
+        <div class="status hidden" id="statusMessage"></div>
+        
+        <div id="actionButtons">
+            <button class="btn" onclick="startSigning()" id="startBtn">Start Signing</button>
+            <button class="btn btn-secondary" onclick="cancelSigning()" id="cancelBtn">Cancel</button>
+        </div>
+        
+        <div id="completionButtons" class="hidden">
+            <button class="btn" onclick="completeSigning()" id="completeBtn">Complete Signing</button>
+            <button class="btn btn-secondary" onclick="resetProcess()">Start Over</button>
+        </div>
+    </div>
+
+    <script>
+        let canvas, ctx;
+        let isDrawing = false;
+        let hasSignature = false;
+        let signingInProgress = false;
+        
+        // Initialize canvas
+        function initCanvas() {
+            canvas = document.getElementById('signatureCanvas');
+            ctx = canvas.getContext('2d');
+            
+            // Set canvas size
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            // Set drawing properties
+            ctx.strokeStyle = '#667eea';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+        }
+        
+        // Mouse/touch events for drawing
+        function startDrawing(e) {
+            if (signingInProgress) return;
+            
+            isDrawing = true;
+            canvas.classList.add('drawing');
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX || e.touches[0].clientX) - rect.left;
+            const y = (e.clientY || e.touches[0].clientY) - rect.top;
+            
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+        
+        function draw(e) {
+            if (!isDrawing || signingInProgress) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX || e.touches[0].clientX) - rect.left;
+            const y = (e.clientY || e.touches[0].clientY) - rect.top;
+            
+            ctx.lineTo(x, y);
+            ctx.stroke();
+        }
+        
+        function stopDrawing() {
+            if (!isDrawing) return;
+            
+            isDrawing = false;
+            canvas.classList.remove('drawing');
+            
+            // Check if signature was drawn
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            let hasContent = false;
+            
+            for (let i = 0; i < data.length; i += 4) {
+                if (data[i] !== 0 || data[i + 1] !== 0 || data[i + 2] !== 0 || data[i + 3] !== 0) {
+                    hasContent = true;
+                    break;
+                }
+            }
+            
+            hasSignature = hasContent;
+        }
+        
+        function clearSignature() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            hasSignature = false;
+            document.getElementById('signaturePreview').classList.add('hidden');
+        }
+        
+        function startSigning() {
+            if (!hasSignature) {
+                showStatus('Please draw your signature first!', 'error');
+                return;
+            }
+            
+            signingInProgress = true;
+            showStatus('Processing your signature...', 'loading');
+            updateProgress(0);
+            
+            // Simulate signing process
+            simulateSigningProcess();
+        }
+        
+        function simulateSigningProcess() {
+            const steps = [
+                { progress: 20, message: 'Validating signature...' },
+                { progress: 40, message: 'Encrypting document...' },
+                { progress: 60, message: 'Applying digital certificate...' },
+                { progress: 80, message: 'Generating audit trail...' },
+                { progress: 100, message: 'Signature completed successfully!' }
+            ];
+            
+            let currentStep = 0;
+            
+            const processStep = () => {
+                if (currentStep < steps.length) {
+                    const step = steps[currentStep];
+                    updateProgress(step.progress);
+                    showStatus(step.message, step.progress === 100 ? 'success' : 'loading');
+                    
+                    currentStep++;
+                    setTimeout(processStep, 800);
+                } else {
+                    // Show completion
+                    setTimeout(() => {
+                        showCompletion();
+                    }, 1000);
+                }
+            };
+            
+            processStep();
+        }
+        
+        function showCompletion() {
+            // Save signature as image
+            const signatureData = canvas.toDataURL();
+            const preview = document.getElementById('signaturePreview');
+            preview.innerHTML = '<img src="' + signatureData + '" style="max-width: 100%; height: auto;">';
+            preview.classList.remove('hidden');
+            
+            // Hide canvas and show completion
+            canvas.style.display = 'none';
+            document.getElementById('actionButtons').classList.add('hidden');
+            document.getElementById('completionButtons').classList.remove('hidden');
+            
+            showStatus('✅ Document signed successfully!', 'success');
+        }
+        
+        function completeSigning() {
+            // Simulate completion callback
+            const completionUrl = window.location.href + '?status=completed&timestamp=' + Date.now();
+            
+            // Try to navigate to completion URL (for WebView detection)
+            if (window.parent !== window) {
+                // We're in an iframe/WebView
+                window.parent.postMessage({
+                    type: 'esign_completed',
+                    url: completionUrl,
+                    timestamp: Date.now()
+                }, '*');
+            }
+            
+            // Also try URL change for WebView navigation detection
+            setTimeout(() => {
+                window.location.href = completionUrl;
+            }, 100);
+        }
+        
+        function cancelSigning() {
+            if (confirm('Are you sure you want to cancel the signing process?')) {
+                resetProcess();
+            }
+        }
+        
+        function resetProcess() {
+            signingInProgress = false;
+            hasSignature = false;
+            clearSignature();
+            canvas.style.display = 'block';
+            document.getElementById('actionButtons').classList.remove('hidden');
+            document.getElementById('completionButtons').classList.add('hidden');
+            document.getElementById('signaturePreview').classList.add('hidden');
+            hideStatus();
+            updateProgress(0);
+        }
+        
+        function updateProgress(percent) {
+            document.getElementById('progressBar').style.width = percent + '%';
+        }
+        
+        function showStatus(message, type) {
+            const status = document.getElementById('statusMessage');
+            status.textContent = message;
+            status.className = 'status ' + type;
+            status.classList.remove('hidden');
+        }
+        
+        function hideStatus() {
+            document.getElementById('statusMessage').classList.add('hidden');
+        }
+        
+        // Event listeners
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+        
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            startDrawing(e);
+        });
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            draw(e);
+        });
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            stopDrawing();
+        });
+        
+        // Initialize when page loads
+        window.addEventListener('load', initCanvas);
+        window.addEventListener('resize', initCanvas);
+        
+        // Handle URL parameters for pre-filling data
+        const urlParams = new URLSearchParams(window.location.search);
+        const name = urlParams.get('name');
+        const email = urlParams.get('email');
+        const mobile = urlParams.get('mobile');
+        
+        if (name) document.getElementById('signerName').textContent = name;
+        if (email) document.getElementById('signerEmail').textContent = email;
+        if (mobile) document.getElementById('signerMobile').textContent = mobile;
+    </script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'simple_upload_screen.dart';
+import 'esign_form_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -68,18 +69,16 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 30),
 
-              // Form Fill Option
+              // E-Signature Option
               _buildOptionCard(
                 context: context,
-                title: 'Form Fill',
-                subtitle: 'Fill out forms quickly',
-                icon: Icons.description,
+                title: 'E-Signature',
+                subtitle: 'Sign documents digitally',
+                icon: Icons.edit_document,
                 onTap: () {
-                  // TODO: Navigate to form fill screen
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Form Fill feature coming soon!'),
-                      backgroundColor: Color(0xFFfe002a),
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const ESignFormScreen(),
                     ),
                   );
                 },

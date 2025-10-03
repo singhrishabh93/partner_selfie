@@ -112,14 +112,16 @@ class GeminiV1BetaService {
   /// Generate stylized portrait with specific prompt
   static Future<File> generateStylizedPortrait(String userPrompt) async {
     const prompt = '''
-Create a stylized portrait of a person standing with arms crossed, looking confidently at the camera. 
+Create a stylized portrait of a person standing with arms firmly crossed across the chest, looking confidently at the camera. 
+Arms must always remain crossed, no variations. 
 Use the face from the uploaded image. 
 Create a modern, clean background with subtle gradients. 
 Position the person slightly to the right side of the frame, not centered. 
 The person should wear a plain black fitted t-shirt with the "FLASHOOT" logo printed on it in white text, seamlessly blended into the fabric so it looks naturally printed. 
 Lighting should be soft, with a clean professional finish. 
 Minimal shadows, modern look, sharp contrast between person and background. 
-Final output should be exactly 1600x1200 pixels (4:3 aspect ratio).
+Final output must be exactly 1600x1200 pixels (4:3 aspect ratio).
+
 ''';
 
     return await generateImage(prompt);
