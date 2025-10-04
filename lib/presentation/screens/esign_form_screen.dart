@@ -51,22 +51,35 @@ class _ESignFormScreenState extends State<ESignFormScreen> {
         return;
       }
 
-      // Initiate SurePass eSign process
+      // Step 1: Initialize SurePass eSign process
       final result = await _esignService.initiateESign(
         fullName: _nameController.text,
         userEmail: _emailController.text,
         mobileNumber: _mobileController.text,
-        pdfUrl: 'https://www.aeee.in/wp-content/uploads/2020/08/Sample-pdf.pdf',
+        callbackUrl: 'https://yourapp.com/esign/callback',
       );
 
       if (result['success'] == true) {
-        _esignUrl = result['esign_url'];
-        _transactionId = result['transaction_id'];
+        final clientId = result['client_id'];
 
-        if (_esignUrl != null) {
-          _showEsignWebView();
+        // Step 2: Upload PDF by link
+        final uploadResult = await _esignService.uploadPdfByLink(
+          clientId: clientId,
+          pdfUrl:
+              'https://www.aeee.in/wp-content/uploads/2020/08/Sample-pdf.pdf',
+        );
+
+        if (uploadResult['success'] == true) {
+          _esignUrl = result['esign_url'];
+          _transactionId = result['transaction_id'];
+
+          if (_esignUrl != null) {
+            _showEsignWebView();
+          } else {
+            _showErrorDialog('Failed to generate e-sign URL');
+          }
         } else {
-          _showErrorDialog('Failed to generate e-sign URL');
+          _showErrorDialog('Failed to upload PDF: ${uploadResult['message']}');
         }
       } else {
         _showErrorDialog('Failed to initiate eSign: ${result['message']}');
@@ -78,87 +91,6 @@ class _ESignFormScreenState extends State<ESignFormScreen> {
         _isLoading = false;
       });
     }
-  }
-
-  void _showEsignOptions() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Choose E-Signature Method'),
-        content: const Text(
-          'How would you like to proceed with the e-signature?\n\n'
-          '• In-App Browser: Sign within the app\n'
-          '• External Browser: Open in your default browser (Recommended)',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _showEsignWebView();
-            },
-            child: const Text('In-App Browser'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _openExternalBrowser();
-            },
-            child: const Text('External Browser'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _openExternalBrowser() async {
-    try {
-      final uri = Uri.parse(_esignUrl!);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-
-        // Show a dialog to check if signing was completed
-        _showCompletionDialog();
-      } else {
-        _showErrorDialog('Cannot open URL in external browser');
-      }
-    } catch (e) {
-      _showErrorDialog('Error opening URL: $e');
-    }
-  }
-
-  void _showCompletionDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('E-Signature Process'),
-        content: const Text(
-          'The e-signature page has opened in your browser.\n\n'
-          'Please complete the signing process there.\n\n'
-          'Once you\'re done, come back to this app and click "I\'ve Completed Signing".',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _showEsignWebView(); // Try WebView as fallback
-            },
-            child: const Text('Try In-App Browser'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _onEsignSuccess(_esignUrl!); // Use the original URL as success
-            },
-            child: const Text('I\'ve Completed Signing'),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showEsignWebView() {
@@ -726,18 +658,37 @@ class EsignSuccessScreen extends StatelessWidget {
   Future<void> _downloadDocument(BuildContext context) async {
     try {
       final esignService = MCPSurePassService();
-      final directory = await getApplicationDocumentsDirectory();
-      final filePath = '${directory.path}/signed_document.pdf';
 
-      await esignService.downloadSignedDocument(documentUrl, filePath);
+      // Get signed document info first
+      final documentInfo =
+          await esignService.getSignedDocument(transactionId ?? '');
 
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Document downloaded successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+      if (documentInfo['success'] == true) {
+        final directory = await getApplicationDocumentsDirectory();
+        final filePath = '${directory.path}/signed_document.pdf';
+
+        // Download the signed document
+        await esignService.downloadSignedDocument(
+            transactionId ?? '', filePath);
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Document downloaded successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'Failed to get signed document: ${documentInfo['message']}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (context.mounted) {
