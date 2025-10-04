@@ -56,6 +56,7 @@ class _ESignFormScreenState extends State<ESignFormScreen> {
         fullName: _nameController.text,
         userEmail: _emailController.text,
         mobileNumber: _mobileController.text,
+        pdfUrl: 'https://www.aeee.in/wp-content/uploads/2020/08/Sample-pdf.pdf',
       );
 
       if (result['success'] == true) {

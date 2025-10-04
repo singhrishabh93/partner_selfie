@@ -34,15 +34,17 @@ class MCPSurePassService {
     required String fullName,
     required String userEmail,
     required String mobileNumber,
+    String? pdfUrl,
   }) async {
     try {
       print('Initiating SurePass eSign for: $fullName');
 
-      // Initialize eSign with PDF URL
-      final esignResult = await _initializeESignWithSurePass(
+      // Initialize eSign with PDF URL included directly
+      final esignResult = await _initiateESign(
         fullName: fullName,
         userEmail: userEmail,
         mobileNumber: mobileNumber,
+        pdfUrl: pdfUrl,
       );
 
       return {
@@ -61,21 +63,19 @@ class MCPSurePassService {
     }
   }
 
-  /// Initialize eSign with real SurePass API
-  Future<Map<String, dynamic>> _initializeESignWithSurePass({
+  /// Initialize eSign with PDF URL included directly
+  Future<Map<String, dynamic>> _initiateESign({
     required String fullName,
     required String userEmail,
     required String mobileNumber,
+    String? pdfUrl,
   }) async {
     try {
-      print('Initializing SurePass eSign...');
+      print('Initializing SurePass eSign with PDF...');
 
-      // Prepare request data for SurePass API
+      // Prepare request data for SurePass API (with PDF URL included)
       final requestData = {
-        'pdf_pre_uploaded': true,
-        'pdf_url':
-            'https://raw.githubusercontent.com/singhrishabh93/partner_selfie/main/assets/dummy-pdf_2.pdf',
-        'sign_type': 'hsm',
+        'sign_type': 'suresign',
         'config': {
           'auth_mode': '1', // Aadhaar OTP
           'reason': SurePassConfig.reason,
@@ -94,6 +94,12 @@ class MCPSurePassService {
           'user_email': userEmail,
         }
       };
+
+      // Add PDF URL if provided
+      if (pdfUrl != null) {
+        requestData['pdf_url'] = pdfUrl;
+        print('Including PDF URL: $pdfUrl');
+      }
 
       print('SurePass eSign request data: $requestData');
 
@@ -117,11 +123,14 @@ class MCPSurePassService {
         final responseData = jsonDecode(response.body);
         if (responseData['success'] == true) {
           final data = responseData['data'];
-          print('SurePass eSign URL received: ${data['url']}');
+          print('SurePass eSign response received:');
+          print('- client_id: ${data['client_id']}');
+          print('- token: ${data['token']}');
+          print('- url: ${data['url']}');
           return {
-            'url': data['url'],
             'client_id': data['client_id'],
             'token': data['token'],
+            'url': data['url'],
           };
         } else {
           throw Exception('SurePass API error: ${responseData['message']}');
