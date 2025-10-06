@@ -54,8 +54,8 @@ class MCPSurePassService {
           'positions': {
             '1': [
               {
-                'x': 10,
-                'y': 20,
+                'x': 40,
+                'y': 40,
               }
             ]
           }
