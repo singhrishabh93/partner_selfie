@@ -2,8 +2,13 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class SurePassConfig {
   // SurePass eSign API Configuration (Sandbox Environment)
-  static String get baseUrl =>
-      dotenv.env['SUREPASS_BASE_URL'] ?? 'https://sandbox.surepass.io';
+  static String get baseUrl {
+    final url = dotenv.env['SUREPASS_BASE_URL'];
+    if (url == null) {
+      throw Exception('SUREPASS_BASE_URL not found in environment variables');
+    }
+    return url;
+  }
 
   // SurePass sandbox token for testing
   // Token expires: 2025-12-31 (auto-refresh as needed)
