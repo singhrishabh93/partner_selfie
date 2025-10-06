@@ -65,8 +65,7 @@ class _ESignFormScreenState extends State<ESignFormScreen> {
         // Step 2: Upload PDF by link
         final uploadResult = await _esignService.uploadPdfByLink(
           clientId: clientId,
-          pdfUrl:
-              'https://www.aeee.in/wp-content/uploads/2020/08/Sample-pdf.pdf',
+          pdfUrl: 'https://d3b8wlkco88yji.cloudfront.net/utils/dummy-pdf.pdf',
         );
 
         if (uploadResult['success'] == true) {

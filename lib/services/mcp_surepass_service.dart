@@ -45,8 +45,8 @@ class MCPSurePassService {
             true, // We will provide the PDF via upload-pdf endpoint
         'callback_url': callbackUrl ?? 'https://yourapp.com/esign/callback',
         'config': {
-          'accept_selfie': true,
-          'allow_selfie_upload': true,
+          'accept_selfie': false,
+          'allow_selfie_upload': false,
           'accept_virtual_sign': true,
           'track_location': true,
           'auth_mode': '1', // Aadhaar OTP
