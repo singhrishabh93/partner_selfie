@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'simple_upload_screen.dart';
 import 'esign_form_screen.dart';
+import '../../services/mcp_surepass_service.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -83,6 +84,10 @@ class HomeScreen extends StatelessWidget {
                   );
                 },
               ),
+              // const SizedBox(height: 20),
+
+              // Branding Button - Commented out as branding is already set
+              // _buildBrandingButton(context),
             ],
           ),
         ),
@@ -167,5 +172,98 @@ class HomeScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildBrandingButton(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        _setBranding(context);
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.white.withOpacity(0.1),
+              Colors.white.withOpacity(0.05),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.branding_watermark,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Text(
+              'Set Branding',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _setBranding(BuildContext context) async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(
+          color: Colors.white,
+        ),
+      ),
+    );
+
+    try {
+      // Import the service
+      final service = MCPSurePassService();
+
+      // Call the branding API
+      final result = await service.setBranding(
+        brandImageUrl:
+            'https://d3b8wlkco88yji.cloudfront.net/utils/flashoot%20logo-black.png',
+        brandName: 'Flashoot',
+      );
+
+      // Close loading dialog
+      Navigator.of(context).pop();
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message'] ?? 'Branding set successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      // Close loading dialog
+      Navigator.of(context).pop();
+
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error setting branding: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }

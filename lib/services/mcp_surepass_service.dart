@@ -331,4 +331,51 @@ class MCPSurePassService {
       throw Exception('SurePass History fetch error: $e');
     }
   }
+
+  /// Set branding for eSign using real SurePass API
+  Future<Map<String, dynamic>> setBranding({
+    required String brandImageUrl,
+    required String brandName,
+  }) async {
+    try {
+      print('Setting SurePass branding: $brandName');
+
+      final requestData = {
+        'brand_image_url': brandImageUrl,
+        'brand_name': brandName,
+      };
+
+      print('SurePass branding request data: $requestData');
+
+      final response = await http
+          .post(
+            Uri.parse('${SurePassConfig.baseUrl}/api/v1/esign/set-branding'),
+            headers: {
+              'Authorization': 'Bearer ${SurePassConfig.apiKey}',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode(requestData),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      print('SurePass branding response status: ${response.statusCode}');
+      print('SurePass branding response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': 'Branding set successfully',
+          'brand_name': brandName,
+          'brand_image_url': brandImageUrl,
+          'response': responseData,
+        };
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      print('SurePass branding error: $e');
+      throw Exception('SurePass branding error: $e');
+    }
+  }
 }
