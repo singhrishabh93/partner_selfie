@@ -7,9 +7,13 @@ class SurePassConfig {
 
   // SurePass sandbox token for testing
   // Token expires: 2025-12-31 (auto-refresh as needed)
-  static String get apiKey =>
-      dotenv.env['SUREPASS_API_KEY'] ??
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc1OTQ4OTAxMywianRpIjoiM2Y0NWIyYWYtYjU5ZS00ZTYyLThhZmQtM2YxMGYzZmE2YTNkIiwidHlwZSI6ImFjY2VzcyIsImlkZW50aXR5IjoiZGV2LmtvbmNoYW1rb2RlQHN1cmVwYXNzLmlvIiwibmJmIjoxNzU5NDg5MDEzLCJleHAiOjE3NjA3ODUwMTMsImVtYWlsIjoia29uY2hhbWtvZGVAc3VyZXBhc3MuaW8iLCJ0ZW5hbnRfaWQiOiJtYWluIiwidXNlcl9jbGFpbXMiOnsic2NvcGVzIjpbInVzZXIiXX19.BOCbJX9mQw34EtdYTyFPMokoZTqu-w7_gTXuc5E6f1k';
+  static String get apiKey {
+    final key = dotenv.env['SUREPASS_API_KEY'];
+    if (key == null) {
+      throw Exception('SUREPASS_API_KEY not found in environment variables');
+    }
+    return key;
+  }
 
   // eSign Configuration
   static const String reason = 'Non Disclosure Agreement';
