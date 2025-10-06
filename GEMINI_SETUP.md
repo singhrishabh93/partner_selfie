@@ -12,14 +12,26 @@
 
 ## Setting Up the API Key in the App
 
-1. **Open the config file**: Navigate to `lib/config/gemini_config.dart`
+1. **Create .env file**: In the root directory of your project, create a file named `.env`
 
-2. **Replace the placeholder**: Update the `apiKey` variable:
-   ```dart
-   static const String apiKey = 'YOUR_ACTUAL_API_KEY_HERE';
+2. **Add your API key**: Add the following content to the `.env` file:
+   ```
+   # Gemini AI Configuration
+   # Get your API key from: https://makersuite.google.com/app/apikey
+   GEMINI_API_KEY=your_actual_api_key_here
+   
+   # Optional: Gemini model configuration
+   GEMINI_MODEL=gemini-2.5-flash-image-preview
+   
+   # Optional: Image generation settings
+   IMAGE_WIDTH=1600
+   IMAGE_HEIGHT=1200
+   IMAGE_FORMAT=jpeg
    ```
 
-3. **Save the file**: The app will now use your API key for Gemini AI processing
+3. **Replace the placeholder**: Replace `your_actual_api_key_here` with your actual Gemini API key
+
+4. **Save the file**: The app will now use your API key for Gemini AI processing
 
 ## Testing the Integration
 
