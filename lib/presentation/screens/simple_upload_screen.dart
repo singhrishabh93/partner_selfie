@@ -1,15 +1,26 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../cubits/simple_upload_cubit.dart';
+import 'face_capture_screen.dart';
 
 class SimpleUploadScreen extends StatelessWidget {
-  const SimpleUploadScreen({super.key});
+  final Uint8List? capturedImageBytes;
+
+  const SimpleUploadScreen({super.key, this.capturedImageBytes});
 
   @override
   Widget build(BuildContext context) {
+    // Set captured image if provided
+    if (capturedImageBytes != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.read<SimpleUploadCubit>().setCapturedImage(capturedImageBytes!);
+      });
+    }
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -75,6 +86,35 @@ class SimpleUploadScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 40),
                   ],
+
+                  // Face Capture Button
+                  if (state.selectedImage == null)
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const FaceCaptureScreen(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.camera_alt, color: Colors.white),
+                      label: const Text(
+                        'Capture Face',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFfe002a),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 30,
+                          vertical: 15,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                      ),
+                    ),
+
+                  const SizedBox(height: 20),
 
                   // Upload Button
                   if (state.selectedImage == null)

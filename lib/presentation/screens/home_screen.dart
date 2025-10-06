@@ -61,6 +61,7 @@ class HomeScreen extends StatelessWidget {
                 subtitle: 'Transform your photos with AI',
                 icon: Icons.auto_awesome,
                 onTap: () {
+                  print('Image Maker button tapped'); // Debug log
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => const SimpleUploadScreen(),
@@ -77,6 +78,7 @@ class HomeScreen extends StatelessWidget {
                 subtitle: 'Sign documents digitally',
                 icon: Icons.edit_document,
                 onTap: () {
+                  print('E-Signature button tapped'); // Debug log
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => const ESignFormScreen(),
@@ -84,7 +86,6 @@ class HomeScreen extends StatelessWidget {
                   );
                 },
               ),
-              // const SizedBox(height: 20),
 
               // Branding Button - Commented out as branding is already set
               // _buildBrandingButton(context),
@@ -167,6 +168,67 @@ class HomeScreen extends StatelessWidget {
               Icons.arrow_forward_ios,
               color: Colors.white54,
               size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextButton({
+    required BuildContext context,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.white.withOpacity(0.1),
+              Colors.white.withOpacity(0.05),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.face,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.white70,
+                  ),
+                ),
+              ],
             ),
           ],
         ),

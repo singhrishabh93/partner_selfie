@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/simple_ai_processor.dart';
@@ -56,6 +57,25 @@ class SimpleUploadCubit extends Cubit<SimpleUploadState> {
     } catch (e) {
       emit(state.copyWith(
         errorMessage: 'Failed to pick image: ${e.toString()}',
+      ));
+    }
+  }
+
+  Future<void> setCapturedImage(Uint8List imageBytes) async {
+    try {
+      // Create a temporary file from the captured image bytes
+      final tempDir = Directory.systemTemp;
+      final tempFile = File(
+          '${tempDir.path}/captured_image_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      await tempFile.writeAsBytes(imageBytes);
+
+      emit(state.copyWith(
+        selectedImage: tempFile,
+        errorMessage: null,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        errorMessage: 'Failed to process captured image: ${e.toString()}',
       ));
     }
   }
