@@ -42,44 +42,19 @@ class _ESignFormScreenState extends State<ESignFormScreen> {
     });
 
     try {
-      // Test API connectivity first
-      print('Testing API connectivity...');
-      final isConnected = await _esignService.testApiConnectivity();
-      if (!isConnected) {
-        _showErrorDialog(
-            'Unable to connect to SurePass API. Please check your internet connection and try again.');
-        return;
-      }
-
-      // Step 1: Initialize SurePass eSign process
-      final result = await _esignService.initiateESign(
+      // Use the complete eSign flow method - handles initialization and PDF upload
+      final result = await _esignService.completeESignFlow(
         fullName: _nameController.text,
         userEmail: _emailController.text,
         mobileNumber: _mobileController.text,
+        pdfUrl: 'https://d3b8wlkco88yji.cloudfront.net/utils/dummy-pdf.pdf',
         callbackUrl: 'https://yourapp.com/esign/callback',
       );
 
       if (result['success'] == true) {
-        final clientId = result['client_id'];
-
-        // Step 2: Upload PDF by link
-        final uploadResult = await _esignService.uploadPdfByLink(
-          clientId: clientId,
-          pdfUrl: 'https://d3b8wlkco88yji.cloudfront.net/utils/dummy-pdf.pdf',
-        );
-
-        if (uploadResult['success'] == true) {
-          _esignUrl = result['esign_url'];
-          _transactionId = result['transaction_id'];
-
-          if (_esignUrl != null) {
-            _showEsignWebView();
-          } else {
-            _showErrorDialog('Failed to generate e-sign URL');
-          }
-        } else {
-          _showErrorDialog('Failed to upload PDF: ${uploadResult['message']}');
-        }
+        _esignUrl = result['esign_url'];
+        _transactionId = result['client_id'];
+        _showEsignWebView();
       } else {
         _showErrorDialog('Failed to initiate eSign: ${result['message']}');
       }
@@ -155,16 +130,13 @@ class _ESignFormScreenState extends State<ESignFormScreen> {
 
     try {
       final isConnected = await _esignService.testApiConnectivity();
-      if (isConnected) {
-        _showErrorDialog(
-            '✅ API Connection Test Successful!\n\nSurePass API is reachable and responding.');
-      } else {
-        _showErrorDialog(
-            '❌ API Connection Test Failed!\n\nUnable to reach SurePass API. This could be due to:\n• Network connectivity issues\n• Incorrect API endpoint\n• Firewall restrictions\n• API service downtime');
-      }
+      final message = isConnected
+          ? '✅ API Connection Test Successful!\n\nSurePass API is reachable and responding.'
+          : '❌ API Connection Test Failed!\n\nUnable to reach SurePass API. Please check your internet connection.';
+
+      _showErrorDialog(message);
     } catch (e) {
-      _showErrorDialog(
-          '❌ API Connection Test Failed!\n\nError: $e\n\nPlease check your internet connection and try again.');
+      _showErrorDialog('❌ API Connection Test Failed!\n\nError: $e');
     } finally {
       setState(() {
         _isLoading = false;
@@ -325,8 +297,6 @@ class _EsignWebViewScreenState extends State<EsignWebViewScreen> {
   late final WebViewController _controller;
   bool _isLoading = true;
   String? _errorMessage;
-  int _retryCount = 0;
-  static const int _maxRetries = 3;
   Timer? _timeoutTimer;
 
   @override
@@ -423,15 +393,15 @@ class _EsignWebViewScreenState extends State<EsignWebViewScreen> {
   String _getErrorMessage(WebResourceError error) {
     if (error.description.contains('ERR_CONNECTION_RESET') ||
         error.description.contains('connection was reset')) {
-      return 'Connection was reset by the server. This might be due to server security settings. Please try again or contact support.';
+      return 'Connection was reset by the server. Please try again.';
     } else if (error.description.contains('network connection was lost') ||
         error.description.contains('network error')) {
-      return 'Network connection lost. Please check your internet connection and try again.';
+      return 'Network connection lost. Please check your internet connection.';
     } else if (error.description.contains('timeout')) {
       return 'Request timed out. Please try again.';
     } else if (error.description.contains('SSL') ||
         error.description.contains('certificate')) {
-      return 'Security certificate error. Please try again or contact support.';
+      return 'Security certificate error. Please try again.';
     } else if (error.description.contains('ERR_NAME_NOT_RESOLVED')) {
       return 'Cannot resolve server address. Please check your internet connection.';
     } else {
@@ -440,20 +410,12 @@ class _EsignWebViewScreenState extends State<EsignWebViewScreen> {
   }
 
   void _retryLoad() {
-    if (_retryCount < _maxRetries) {
-      setState(() {
-        _retryCount++;
-        _errorMessage = null;
-        _isLoading = true;
-      });
-      print('Retrying load (attempt $_retryCount/$_maxRetries)');
-      _loadUrl();
-    } else {
-      setState(() {
-        _errorMessage =
-            'Failed to load after $_maxRetries attempts. Please check your internet connection and try again.';
-      });
-    }
+    setState(() {
+      _errorMessage = null;
+      _isLoading = true;
+    });
+    print('Retrying load...');
+    _loadUrl();
   }
 
   @override
@@ -469,7 +431,6 @@ class _EsignWebViewScreenState extends State<EsignWebViewScreen> {
             onPressed: () {
               print('Reloading WebView...');
               setState(() {
-                _retryCount = 0;
                 _errorMessage = null;
                 _isLoading = true;
               });
@@ -538,9 +499,7 @@ class _EsignWebViewScreenState extends State<EsignWebViewScreen> {
                     ElevatedButton.icon(
                       onPressed: _retryLoad,
                       icon: const Icon(Icons.refresh),
-                      label: Text(_retryCount < _maxRetries
-                          ? 'Retry (${_retryCount + 1}/$_maxRetries)'
-                          : 'Retry'),
+                      label: const Text('Retry'),
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton.icon(
