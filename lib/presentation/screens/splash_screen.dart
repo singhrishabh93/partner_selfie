@@ -222,55 +222,7 @@ class _SplashScreenState extends State<SplashScreen>
           ),
           textAlign: TextAlign.center,
         ),
-        // Image-filled text overlay
-        _buildImageFilledText(),
       ],
-    );
-  }
-
-  Widget _buildImageFilledText() {
-    return Stack(
-      children: List.generate(_imagePaths.length, (index) {
-        return AnimatedBuilder(
-          animation: _imageControllers[index],
-          builder: (context, child) {
-            return Opacity(
-              opacity: _imageOpacities[index].value,
-              child: Transform.scale(
-                scale: _imageScales[index].value,
-                child: ShaderMask(
-                  blendMode: BlendMode.dstIn,
-                  shaderCallback: (bounds) {
-                    return const LinearGradient(
-                      colors: [Colors.transparent, Colors.transparent],
-                      stops: [0.0, 1.0],
-                    ).createShader(bounds);
-                  },
-                  child: Container(
-                    width: 300,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      image: DecorationImage(
-                        image: AssetImage(_imagePaths[index]),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                    child: const Text(
-                      'Image Maker',
-                      style: TextStyle(
-                        fontSize: 48,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.transparent,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      }),
     );
   }
 }
