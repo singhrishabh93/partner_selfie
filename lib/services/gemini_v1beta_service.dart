@@ -9,6 +9,52 @@ class GeminiV1BetaService {
       'https://generativelanguage.googleapis.com/v1beta';
   static const String _model = 'gemini-2.5-flash-image-preview';
 
+  // Common prompt template for stylized portrait generation
+  static const String _stylizedPortraitPrompt = '''
+Generate an ultra-realistic, photo-accurate portrait.
+
+Face: Use the exact face from the uploaded image with no changes to structure, skin tone, lighting, or expression.
+The result must look like a real photo of the same person — not an AI reinterpretation.
+If accurate face matching cannot be guaranteed, do not generate the image.
+
+Pose: Person is standing confidently with both arms firmly crossed across the chest — no alternate or partial poses allowed.
+
+Clothing:
+
+The person wears a plain black fitted T-shirt.
+
+Apply the provided “FLASHOOT” logo in pure white directly onto the fabric.
+
+The logo must appear printed or heat-pressed into the shirt — no patch, box, outline, or background color (preserve transparency).
+
+The logo should follow the shirt’s folds and lighting naturally, looking like real screen-printed text.
+
+Composition:
+
+Person placed slightly right of center (not perfectly centered).
+
+Background: clean, modern gradient with soft tones, no patterns or props.
+
+Lighting & Style:
+
+Soft, balanced professional studio light.
+
+Minimal shadows, crisp edges, high contrast, and modern editorial finish.
+
+Output must look like a high-quality real photograph, not stylized or painted.
+
+Hard Rules:
+
+Maintain exact facial identity.
+
+Keep arms fully crossed.
+
+Do not add any logo background or patch.
+
+If natural logo blending or true facial realism cannot be maintained, cancel the generation.
+
+''';
+
   /// Generate image using Gemini 2.5 Flash Image Preview via v1beta API
   static Future<File> generateImage(String prompt) async {
     try {
@@ -111,20 +157,7 @@ class GeminiV1BetaService {
 
   /// Generate stylized portrait with specific prompt
   static Future<File> generateStylizedPortrait(String userPrompt) async {
-    const prompt = '''
-Create a stylized portrait of a person standing with arms firmly crossed across the chest, looking confidently at the camera. 
-Arms must always remain crossed, no variations. 
-Use the face from the uploaded image. 
-Create a modern, clean background with subtle gradients. 
-Position the person slightly to the right side of the frame, not centered. 
-The person should wear a plain black fitted t-shirt with the "FLASHOOT" logo printed on it in white text, seamlessly blended into the fabric so it looks naturally printed. 
-Lighting should be soft, with a clean professional finish. 
-Minimal shadows, modern look, sharp contrast between person and background. 
-Final output must be exactly 1600x1200 pixels (4:3 aspect ratio).
-
-''';
-
-    return await generateImage(prompt);
+    return await generateImage(_stylizedPortraitPrompt);
   }
 
   /// Generate stylized portrait with user image, logo, and background
@@ -146,20 +179,10 @@ Final output must be exactly 1600x1200 pixels (4:3 aspect ratio).
       const prompt = '''
 I'm providing you with 3 images:
 1. A person's photo (use their face and body as reference)
-2. A logo image (use this exact logo design)
+2. A logo image (use this exact logo design)6
 3. A background image (use this as the background)
 
-Create a stylized portrait where:
-- Use the person's face and body from the first image
-- Apply the exact logo from the second image onto a black fitted t-shirt
-- Use the background from the third image as the backdrop
-- Position the person slightly to the right side of the frame, not centered
-- The logo should be seamlessly blended into the t-shirt fabric so it looks naturally printed
-- Lighting should be soft, with a clean professional finish
-- Minimal shadows, modern look, sharp contrast between person and background
-- Final output should be exactly 1600x1200 pixels (4:3 aspect ratio)
-- Make sure the logo is clearly visible and properly integrated into the clothing
-''';
+$_stylizedPortraitPrompt''';
 
       final requestBody = {
         'contents': [
