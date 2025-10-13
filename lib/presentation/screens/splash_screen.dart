@@ -32,11 +32,28 @@ class _SplashScreenState extends State<SplashScreen>
     'assets/images/7.jpg',
   ];
 
+  // Preload images for faster display
+  final Map<String, ImageProvider> _preloadedImages = {};
+
   @override
   void initState() {
     super.initState();
     _initializeAnimations();
     _startAnimationSequence();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _preloadImages();
+  }
+
+  void _preloadImages() {
+    for (String path in _imagePaths) {
+      _preloadedImages[path] = AssetImage(path);
+      // Preload the image
+      precacheImage(_preloadedImages[path]!, context);
+    }
   }
 
   void _initializeAnimations() {
@@ -67,11 +84,13 @@ class _SplashScreenState extends State<SplashScreen>
       curve: const Interval(0.0, 0.4, curve: Curves.easeOut),
     ));
 
-    // Image animations
+    // Image animations - reduced duration for faster appearance
     _imageControllers = List.generate(
       _imagePaths.length,
       (index) => AnimationController(
-        duration: Duration(milliseconds: 800 + (index * 100)),
+        duration: Duration(
+            milliseconds:
+                400 + (index * 50)), // Reduced from 800 + (index * 100)
         vsync: this,
       ),
     );
@@ -82,7 +101,7 @@ class _SplashScreenState extends State<SplashScreen>
         end: 1.0,
       ).animate(CurvedAnimation(
         parent: controller,
-        curve: Curves.easeOutCubic,
+        curve: Curves.easeOut, // Faster curve than easeOutCubic
       ));
     }).toList();
 
@@ -92,7 +111,8 @@ class _SplashScreenState extends State<SplashScreen>
         end: 1.0,
       ).animate(CurvedAnimation(
         parent: controller,
-        curve: const Interval(0.0, 0.8, curve: Curves.easeIn),
+        curve: const Interval(0.0, 0.6,
+            curve: Curves.easeIn), // Faster opacity transition
       ));
     }).toList();
   }
@@ -101,20 +121,23 @@ class _SplashScreenState extends State<SplashScreen>
     // Start text animation
     _textController.forward();
 
-    // Wait a bit then start image animations
-    await Future.delayed(const Duration(milliseconds: 500));
+    // Reduced wait time before starting image animations
+    await Future.delayed(
+        const Duration(milliseconds: 200)); // Reduced from 500ms
 
-    // Start image animations with staggered timing
+    // Start image animations with faster staggered timing
     for (int i = 0; i < _imageControllers.length; i++) {
-      Future.delayed(Duration(milliseconds: i * 200), () {
+      Future.delayed(Duration(milliseconds: i * 100), () {
+        // Reduced from 200ms to 100ms
         if (mounted) {
           _imageControllers[i].forward();
         }
       });
     }
 
-    // Complete animation after all images are shown
-    await Future.delayed(const Duration(milliseconds: 3000));
+    // Complete animation after all images are shown - reduced total time
+    await Future.delayed(
+        const Duration(milliseconds: 2000)); // Reduced from 3000ms
     if (mounted) {
       widget.onAnimationComplete();
     }
@@ -163,8 +186,8 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(50),
-                          child: Image.asset(
-                            _imagePaths[index],
+                          child: Image(
+                            image: _preloadedImages[_imagePaths[index]]!,
                             fit: BoxFit.cover,
                           ),
                         ),
@@ -197,32 +220,26 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Widget _buildTextWithImageMask() {
-    return Stack(
-      children: [
-        // Black stroke text (always visible)
-        Text(
-          'Image Maker',
-          style: TextStyle(
-            fontSize: 48,
-            fontWeight: FontWeight.bold,
-            foreground: Paint()
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = 3
-              ..color = Colors.black,
+    return Container(
+      width: 200,
+      height: 200,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
-          textAlign: TextAlign.center,
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Image.asset(
+          'assets/logo_splash.png',
+          fit: BoxFit.contain,
         ),
-        // Base white text (always visible)
-        const Text(
-          'Image Maker',
-          style: TextStyle(
-            fontSize: 48,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
+      ),
     );
   }
 }
