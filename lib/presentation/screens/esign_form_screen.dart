@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../services/digio_service.dart';
 
 class ESignFormScreen extends StatefulWidget {
@@ -81,9 +84,53 @@ class _ESignFormScreenState extends State<ESignFormScreen> {
     );
   }
 
-  void _onEsignSuccess(String signedDocumentUrl) {
-    // No completion logic - just keep WebView open
-    // User can manually close using back button
+  void _onEsignSuccess(String signedDocumentUrl) async {
+    // Handle callback URL to check document status
+    try {
+      print('Handling callback URL: $signedDocumentUrl');
+
+      final result = await _digioService.handleCallback(signedDocumentUrl);
+
+      if (result['success'] == true) {
+        final status = result['status'];
+        final documentId = result['document_id'];
+        final agreementStatus = result['agreement_status'];
+
+        if (status == 'completed') {
+          // Document is completed
+          final downloadResult = result['download_result'];
+          if (downloadResult != null && downloadResult['success'] == true) {
+            _showCompletionDialog(
+              'Document Signed Successfully!',
+              'Your document has been signed and downloaded.\n\nDocument ID: $documentId\nStatus: $agreementStatus\n\nPDF is ready for viewing.',
+              true,
+              downloadResult,
+            );
+          } else {
+            _showCompletionDialog(
+              'Document Signed Successfully!',
+              'Your document has been signed.\n\nDocument ID: $documentId\nStatus: $agreementStatus\n\nDownload may be available in your DIGIO account.',
+              true,
+              null,
+            );
+          }
+        } else {
+          // Document is still pending
+          _showCompletionDialog(
+            'Document Pending',
+            'Your document is still being processed.\n\nDocument ID: $documentId\nStatus: $agreementStatus\n\nPlease wait for completion.',
+            false,
+            null,
+          );
+        }
+      } else {
+        _showErrorDialog(
+            'Failed to check document status: ${result['message']}');
+      }
+    } catch (e) {
+      print('Callback handling error: $e');
+      _showErrorDialog('Error checking document status: $e');
+    }
   }
 
   void _showErrorDialog(String message) {
@@ -100,6 +147,93 @@ class _ESignFormScreenState extends State<ESignFormScreen> {
         ],
       ),
     );
+  }
+
+  void _showCompletionDialog(String title, String message, bool isCompleted,
+      Map<String, dynamic>? downloadResult) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          if (isCompleted) ...[
+            if (downloadResult != null &&
+                downloadResult['file_data'] != null) ...[
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pop(context); // Close WebView
+                  _saveAndOpenPDF(downloadResult['file_data']);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('View PDF'),
+              ),
+            ] else ...[
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pop(context); // Close WebView
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Close'),
+              ),
+            ],
+          ] else ...[
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Continue Waiting'),
+            ),
+          ],
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pop(context); // Close WebView
+            },
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _saveAndOpenPDF(List<int> pdfData) async {
+    try {
+      // Save PDF to device storage
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File(
+          '${directory.path}/signed_document_${DateTime.now().millisecondsSinceEpoch}.pdf');
+      await file.writeAsBytes(pdfData);
+
+      // Open PDF in app using WebView
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PDFViewerScreen(
+              pdfPath: file.path,
+              pdfData: pdfData,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error opening PDF: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _fillMyData() {
@@ -394,7 +528,16 @@ class _EsignWebViewScreenState extends State<EsignWebViewScreen> {
           },
           onNavigationRequest: (NavigationRequest request) {
             print('Navigation request to: ${request.url}');
-            // Allow all navigation - no completion logic
+
+            // Check if this is a callback URL with digio_doc_id
+            if (request.url.contains('yourapp.com/success') &&
+                request.url.contains('digio_doc_id=')) {
+              print('Callback URL detected: ${request.url}');
+              widget.onSuccess(request.url);
+              return NavigationDecision.prevent;
+            }
+
+            // Allow all other navigation
             return NavigationDecision.navigate;
           },
         ),
@@ -579,6 +722,156 @@ class _EsignWebViewScreenState extends State<EsignWebViewScreen> {
                   CircularProgressIndicator(),
                   SizedBox(height: 16),
                   Text('Loading e-signature page...'),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class PDFViewerScreen extends StatefulWidget {
+  final String pdfPath;
+  final List<int> pdfData;
+
+  const PDFViewerScreen({
+    super.key,
+    required this.pdfPath,
+    required this.pdfData,
+  });
+
+  @override
+  State<PDFViewerScreen> createState() => _PDFViewerScreenState();
+}
+
+class _PDFViewerScreenState extends State<PDFViewerScreen> {
+  late final WebViewController _controller;
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPDF();
+  }
+
+  void _loadPDF() async {
+    try {
+      _controller = WebViewController()
+        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..setUserAgent(
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1')
+        ..enableZoom(true)
+        ..setBackgroundColor(Colors.white)
+        ..setNavigationDelegate(
+          NavigationDelegate(
+            onPageStarted: (String url) {
+              setState(() {
+                _isLoading = true;
+                _errorMessage = null;
+              });
+            },
+            onPageFinished: (String url) {
+              setState(() {
+                _isLoading = false;
+              });
+            },
+            onWebResourceError: (WebResourceError error) {
+              setState(() {
+                _isLoading = false;
+                _errorMessage = 'Failed to load PDF: ${error.description}';
+              });
+            },
+          ),
+        );
+
+      // Convert PDF data to base64 for display
+      final base64Data = base64Encode(widget.pdfData);
+      final pdfUrl = 'data:application/pdf;base64,$base64Data';
+
+      await _controller.loadRequest(Uri.parse(pdfUrl));
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Error loading PDF: $e';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Signed Document'),
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.download),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('PDF saved to: ${widget.pdfPath}'),
+                  backgroundColor: Colors.green,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            },
+            tooltip: 'Download PDF',
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          if (_errorMessage != null)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error Loading PDF',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _errorMessage = null;
+                          _isLoading = true;
+                        });
+                        _loadPDF();
+                      },
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            WebViewWidget(controller: _controller),
+          if (_isLoading && _errorMessage == null)
+            const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Loading PDF...'),
                 ],
               ),
             ),

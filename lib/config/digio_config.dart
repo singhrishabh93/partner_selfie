@@ -15,7 +15,7 @@ class DigioConfig {
     if (token == null) {
       throw Exception('DIGIO_AUTH_TOKEN not found in environment variables');
     }
-    return token;
+    return token; 
   }
 
   static String get templateKey {

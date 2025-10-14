@@ -100,6 +100,127 @@ class DigioService {
     }
   }
 
+  /// Check document status using DIGIO API
+  Future<Map<String, dynamic>> checkDocumentStatus(String documentId) async {
+    try {
+      print('Checking DIGIO document status for: $documentId');
+
+      final response = await http.get(
+        Uri.parse(
+            '${DigioConfig.baseUrl}/document/$documentId?name_validation=true'),
+        headers: {
+          'Authorization': 'Basic ${DigioConfig.authToken}',
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 30));
+
+      print('DIGIO document status response: ${response.statusCode}');
+      print('DIGIO document status body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        return {
+          'success': true,
+          'document_id': responseData['id'],
+          'agreement_status': responseData['agreement_status'],
+          'is_completed': responseData['agreement_status'] == 'completed',
+          'file_name': responseData['file_name'],
+          'created_at': responseData['created_at'],
+          'updated_at': responseData['updated_at'],
+          'signing_parties': responseData['signing_parties'],
+          'data': responseData,
+        };
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      print('DIGIO document status error: $e');
+      throw Exception('DIGIO document status error: $e');
+    }
+  }
+
+  /// Download completed document using DIGIO API
+  Future<Map<String, dynamic>> downloadDocument(String documentId) async {
+    try {
+      print('Downloading DIGIO document: $documentId');
+
+      final response = await http.get(
+        Uri.parse(
+            '${DigioConfig.baseUrl}/document/download?document_id=$documentId'),
+        headers: {
+          'Authorization': 'Basic ${DigioConfig.authToken}',
+        },
+      ).timeout(const Duration(seconds: 60));
+
+      print('DIGIO download response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'document_id': documentId,
+          'file_data': response.bodyBytes,
+          'content_type': response.headers['content-type'] ?? 'application/pdf',
+          'message': 'Document downloaded successfully',
+        };
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      print('DIGIO download error: $e');
+      throw Exception('DIGIO download error: $e');
+    }
+  }
+
+  /// Handle callback URL - extract document ID and check status
+  Future<Map<String, dynamic>> handleCallback(String callbackUrl) async {
+    try {
+      print('Handling DIGIO callback: $callbackUrl');
+
+      // Extract document ID from callback URL
+      // Expected format: https://yourapp.com/success?status=success&digio_doc_id=DID25101417390475853KNLTXZETV71U&message=Signed%20Successfully
+      final uri = Uri.parse(callbackUrl);
+      final documentId = uri.queryParameters['digio_doc_id'];
+      final status = uri.queryParameters['status'];
+      final message = uri.queryParameters['message'];
+
+      if (documentId == null) {
+        throw Exception('Document ID not found in callback URL');
+      }
+
+      print('Extracted document ID: $documentId');
+      print('Status: $status, Message: $message');
+
+      // Check if status indicates success
+      if (status == 'success') {
+        // Document is completed, download it
+        print('Document is completed, downloading...');
+        final downloadResult = await downloadDocument(documentId);
+
+        return {
+          'success': true,
+          'status': 'completed',
+          'document_id': documentId,
+          'agreement_status': 'completed',
+          'download_result': downloadResult,
+          'message':
+              message ?? 'Document completed and downloaded successfully',
+        };
+      } else {
+        // Document not completed yet
+        return {
+          'success': true,
+          'status': 'pending',
+          'document_id': documentId,
+          'agreement_status': status ?? 'unknown',
+          'message': message ?? 'Document is not completed yet',
+        };
+      }
+    } catch (e) {
+      print('DIGIO callback handling error: $e');
+      throw Exception('DIGIO callback handling error: $e');
+    }
+  }
+
   /// Test API connectivity
   Future<bool> testApiConnectivity() async {
     try {
