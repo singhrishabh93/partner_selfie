@@ -64,7 +64,7 @@ class DigioConfig {
 
   static bool get notifySigners {
     final value = dotenv.env['DIGIO_NOTIFY_SIGNERS'];
-    return value?.toLowerCase() == 'true';
+    return value?.toLowerCase() == 'false';
   }
 
   static String get displayOnPage {
