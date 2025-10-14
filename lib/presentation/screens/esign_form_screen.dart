@@ -2,9 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../services/mcp_surepass_service.dart';
+import '../../services/digio_service.dart';
 
 class ESignFormScreen extends StatefulWidget {
   const ESignFormScreen({super.key});
@@ -17,18 +16,21 @@ class _ESignFormScreenState extends State<ESignFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _mobileController = TextEditingController();
+  final _fathersNameController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _aadhaarController = TextEditingController();
 
   bool _isLoading = false;
   String? _esignUrl;
-  String? _transactionId;
-  final MCPSurePassService _esignService = MCPSurePassService();
+  final DigioService _digioService = DigioService();
 
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _mobileController.dispose();
+    _fathersNameController.dispose();
+    _addressController.dispose();
+    _aadhaarController.dispose();
     super.dispose();
   }
 
@@ -42,18 +44,18 @@ class _ESignFormScreenState extends State<ESignFormScreen> {
     });
 
     try {
-      // Use the complete eSign flow method - handles initialization and PDF upload
-      final result = await _esignService.completeESignFlow(
+      // Create DIGIO sign request
+      final result = await _digioService.createSignRequest(
         fullName: _nameController.text,
-        userEmail: _emailController.text,
-        mobileNumber: _mobileController.text,
-        pdfUrl: 'https://d3b8wlkco88yji.cloudfront.net/utils/demo_nda (2).pdf',
-        callbackUrl: 'https://yourapp.com/esign/callback',
+        email: _emailController.text,
+        fathersName: _fathersNameController.text,
+        address: _addressController.text,
+        aadhaarNumber: _aadhaarController.text,
       );
 
       if (result['success'] == true) {
-        _esignUrl = result['esign_url'];
-        _transactionId = result['client_id'];
+        _esignUrl = result['signing_url'];
+        // Directly open the DIGIO signing URL in in-app browser
         _showEsignWebView();
       } else {
         _showErrorDialog('Failed to initiate eSign: ${result['message']}');
@@ -80,15 +82,8 @@ class _ESignFormScreenState extends State<ESignFormScreen> {
   }
 
   void _onEsignSuccess(String signedDocumentUrl) {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => EsignSuccessScreen(
-          documentUrl: signedDocumentUrl,
-          transactionId: _transactionId,
-        ),
-      ),
-    );
+    // No completion logic - just keep WebView open
+    // User can manually close using back button
   }
 
   void _showErrorDialog(String message) {
@@ -111,7 +106,10 @@ class _ESignFormScreenState extends State<ESignFormScreen> {
     setState(() {
       _nameController.text = 'Rishabh Singh';
       _emailController.text = 'singhrishabh1672@gmail.com';
-      _mobileController.text = '7587136215';
+      _fathersNameController.text = 'HC Verma';
+      _addressController.text =
+          'Dr.Ganesh Residency, 202 Banjara Hills, Hyderabad Telangana 500073';
+      _aadhaarController.text = '1234 4567 8907';
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -129,10 +127,10 @@ class _ESignFormScreenState extends State<ESignFormScreen> {
     });
 
     try {
-      final isConnected = await _esignService.testApiConnectivity();
+      final isConnected = await _digioService.testApiConnectivity();
       final message = isConnected
-          ? '✅ API Connection Test Successful!\n\nSurePass API is reachable and responding.'
-          : '❌ API Connection Test Failed!\n\nUnable to reach SurePass API. Please check your internet connection.';
+          ? '✅ API Connection Test Successful!\n\nDIGIO API is reachable and responding.'
+          : '❌ API Connection Test Failed!\n\nUnable to reach DIGIO API. Please check your internet connection.';
 
       _showErrorDialog(message);
     } catch (e) {
@@ -215,22 +213,57 @@ class _ESignFormScreenState extends State<ESignFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Mobile Number Field
+              // Father's Name Field
               TextFormField(
-                controller: _mobileController,
-                keyboardType: TextInputType.phone,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                controller: _fathersNameController,
                 decoration: const InputDecoration(
-                  labelText: 'Mobile Number *',
+                  labelText: 'Father\'s Name *',
                   border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.phone),
+                  prefixIcon: Icon(Icons.family_restroom),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter your mobile number';
+                    return 'Please enter your father\'s name';
                   }
-                  if (value.length != 10) {
-                    return 'Please enter a valid 10-digit mobile number';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Address Field
+              TextFormField(
+                controller: _addressController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Address *',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.location_on),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your address';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Aadhaar Number Field
+              TextFormField(
+                controller: _aadhaarController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: const InputDecoration(
+                  labelText: 'Aadhaar Number *',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.credit_card),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your Aadhaar number';
+                  }
+                  if (value.length != 12) {
+                    return 'Please enter a valid 12-digit Aadhaar number';
                   }
                   return null;
                 },
@@ -361,18 +394,7 @@ class _EsignWebViewScreenState extends State<EsignWebViewScreen> {
           },
           onNavigationRequest: (NavigationRequest request) {
             print('Navigation request to: ${request.url}');
-
-            // Check for completion indicators
-            if (request.url.contains('success') ||
-                request.url.contains('completed') ||
-                request.url.contains('done') ||
-                request.url.contains('finished')) {
-              print('E-signature completed! URL: ${request.url}');
-              widget.onSuccess(request.url);
-              return NavigationDecision.prevent;
-            }
-
-            // Allow all other navigation
+            // Allow all navigation - no completion logic
             return NavigationDecision.navigate;
           },
         ),
@@ -560,168 +582,7 @@ class _EsignWebViewScreenState extends State<EsignWebViewScreen> {
                 ],
               ),
             ),
-          // Manual completion button (floating)
-          if (!_isLoading && _errorMessage == null)
-            Positioned(
-              bottom: 20,
-              right: 20,
-              child: FloatingActionButton.extended(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Complete E-Signature'),
-                      content: const Text(
-                        'Have you completed the e-signature process?\n\n'
-                        'Click "Yes" to proceed to the success screen.',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('No, Continue'),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            widget.onSuccess(widget.esignUrl);
-                          },
-                          child: const Text('Yes, I\'m Done'),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.check),
-                label: const Text('Done'),
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-              ),
-            ),
         ],
-      ),
-    );
-  }
-}
-
-class EsignSuccessScreen extends StatelessWidget {
-  final String documentUrl;
-  final String? transactionId;
-
-  const EsignSuccessScreen({
-    super.key,
-    required this.documentUrl,
-    this.transactionId,
-  });
-
-  Future<void> _downloadDocument(BuildContext context) async {
-    try {
-      final esignService = MCPSurePassService();
-
-      // Get signed document info first
-      final documentInfo =
-          await esignService.getSignedDocument(transactionId ?? '');
-
-      if (documentInfo['success'] == true) {
-        final directory = await getApplicationDocumentsDirectory();
-        final filePath = '${directory.path}/signed_document.pdf';
-
-        // Download the signed document
-        await esignService.downloadSignedDocument(
-            transactionId ?? '', filePath);
-
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Document downloaded successfully!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } else {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                  'Failed to get signed document: ${documentInfo['message']}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Download failed: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('E-Signature Success'),
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.check_circle,
-                size: 100,
-                color: Colors.green,
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'You have successfully signed the document!',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Your signed document is ready for download.',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 32),
-              ElevatedButton.icon(
-                onPressed: () => _downloadDocument(context),
-                icon: const Icon(Icons.download),
-                label: const Text('Download Signed Document'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: () {
-                  Navigator.popUntil(context, (route) => route.isFirst);
-                },
-                child: const Text('Back to Home'),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
